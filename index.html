@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="et">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Poenimekiri</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #f0f2f5; color: #1a1a1a;
+    min-height: 100vh; padding: 16px 12px 60px;
+  }
+  h1 { font-size: 1.45rem; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 2px; color: #111; }
+  .subtitle { font-size: 0.8rem; color: #999; margin-bottom: 14px; }
+
+  /* TABS */
+  .tabs { display: flex; gap: 0; margin-bottom: 16px; background: #e4e7eb; border-radius: 10px; padding: 3px; }
+  .tab-btn {
+    flex: 1; border: none; background: transparent; border-radius: 8px;
+    padding: 7px 2px; font-size: 0.75rem; font-weight: 600; color: #888; cursor: pointer; transition: all 0.15s;
+  }
+  .tab-btn.active { background: #fff; color: #4a7c59; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* CATALOG SELECT */
+  .catalog-cat { background: #fff; border-radius: 14px; margin-bottom: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); overflow: hidden; }
+  .catalog-cat-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 11px 14px; cursor: pointer; user-select: none; border-bottom: 1.5px solid #f0f2f5;
+  }
+  .catalog-cat-header:hover { background: #fafafa; }
+  .catalog-cat-title { display: flex; align-items: center; gap: 7px; font-weight: 600; font-size: 0.92rem; }
+  .cat-chevron { font-size: 0.72rem; color: #bbb; transition: transform 0.2s; }
+  .cat-chevron.open { transform: rotate(180deg); }
+  .catalog-items { display: none; padding: 6px 10px 8px; flex-wrap: wrap; gap: 7px; }
+  .catalog-items.open { display: flex; }
+  .catalog-chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    border: 1.5px solid #e0e0e0; border-radius: 20px;
+    padding: 5px 11px; font-size: 0.82rem; cursor: pointer;
+    background: #fafafa; color: #444; transition: all 0.13s; user-select: none;
+  }
+  .catalog-chip:hover { border-color: #4a7c59; color: #4a7c59; background: #f0f7f2; }
+  .catalog-chip.selected { border-color: #4a7c59; background: #4a7c59; color: #fff; }
+  .catalog-add-btn {
+    width: 100%; background: #4a7c59; color: #fff; border: none; border-radius: 10px;
+    padding: 12px; font-size: 0.95rem; font-weight: 700; cursor: pointer;
+    margin-top: 4px; transition: background 0.15s;
+  }
+  .catalog-add-btn:hover { background: #3a6347; }
+  .catalog-add-btn:disabled { background: #c5d9cc; cursor: default; }
+
+  /* MANUAL ADD */
+  .add-form {
+    background: #fff; border-radius: 14px; padding: 14px; margin-bottom: 14px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07); display: flex; flex-direction: column; gap: 10px;
+  }
+  .add-form input[type="text"] {
+    border: 1.5px solid #e0e0e0; border-radius: 9px; padding: 10px 12px;
+    font-size: 0.95rem; width: 100%; outline: none; transition: border-color 0.15s;
+  }
+  .add-form input[type="text"]:focus { border-color: #4a7c59; }
+  .form-row { display: flex; gap: 8px; }
+  .form-row select {
+    flex: 1; border: 1.5px solid #e0e0e0; border-radius: 9px;
+    padding: 9px 10px; font-size: 0.88rem; background: #fff; outline: none; cursor: pointer;
+  }
+  .add-btn {
+    background: #4a7c59; color: #fff; border: none; border-radius: 9px;
+    padding: 10px 18px; font-size: 0.92rem; font-weight: 600; cursor: pointer; white-space: nowrap;
+  }
+  .add-btn:hover { background: #3a6347; }
+
+  /* LIST */
+  .category-block { background: #fff; border-radius: 14px; margin-bottom: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); overflow: hidden; }
+  .category-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 14px; cursor: pointer; user-select: none; border-bottom: 1.5px solid #f0f2f5;
+  }
+  .category-header:hover { background: #fafafa; }
+  .cat-title { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 0.93rem; }
+  .cat-count { font-size: 0.73rem; color: #aaa; font-weight: 400; }
+  .item-list { display: none; padding: 4px 0; }
+  .item-list.open { display: block; }
+  .item-row { display: flex; align-items: center; padding: 9px 14px; gap: 10px; border-bottom: 1px solid #f5f5f5; }
+  .item-row:last-child { border-bottom: none; }
+  .item-row:hover { background: #fafcfa; }
+  .item-row input[type="checkbox"] { width: 20px; height: 20px; accent-color: #4a7c59; cursor: pointer; flex-shrink: 0; }
+  .item-label { flex: 1; font-size: 0.93rem; cursor: pointer; }
+  .item-label.checked { text-decoration: line-through; color: #bbb; }
+  .item-qty { font-size: 0.78rem; color: #aaa; white-space: nowrap; }
+  .item-del { background: none; border: none; color: #ddd; font-size: 1rem; cursor: pointer; padding: 2px 4px; border-radius: 4px; }
+  .item-del:hover { color: #e05555; }
+
+  /* SUMMARY */
+  .summary-box { background: #fff; border-radius: 14px; padding: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); margin-top: 4px; }
+  .summary-title-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .summary-title { font-size: 0.88rem; font-weight: 700; color: #4a7c59; }
+  .share-btns { display: flex; gap: 6px; }
+  .share-btn { border: none; border-radius: 8px; padding: 5px 11px; font-size: 0.78rem; font-weight: 600; cursor: pointer; background: #f0f2f5; color: #555; transition: all 0.15s; }
+  .share-btn:hover { background: #e4e7eb; }
+  .share-btn-green { background: #4a7c59 !important; color: #fff !important; }
+  .share-btn-green:hover { background: #3a6347 !important; }
+  .share-btn.copied { background: #d4edda !important; color: #2d6a4f !important; }
+  .summary-list { list-style: none; font-size: 0.87rem; color: #333; line-height: 1.75; }
+  .summary-list li::before { content: "• "; color: #4a7c59; }
+  .bottom-bar { display: flex; gap: 8px; margin-top: 12px; }
+  .clear-btn { flex: 1; background: #f5f5f5; border: none; border-radius: 9px; padding: 10px; font-size: 0.83rem; color: #888; cursor: pointer; }
+  .clear-btn:hover { background: #ebebeb; color: #555; }
+  .clear-checked-btn { flex: 1; background: #fff0f0; border: none; border-radius: 9px; padding: 10px; font-size: 0.83rem; color: #e05555; cursor: pointer; }
+  .clear-checked-btn:hover { background: #ffe0e0; }
+  .empty-msg { text-align: center; color: #ccc; font-size: 0.88rem; padding: 24px 0; }
+
+  /* CATALOG EDIT */
+  .edit-cat-block { background: #fff; border-radius: 14px; margin-bottom: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); overflow: hidden; }
+  .edit-cat-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 11px 14px; cursor: pointer; user-select: none; border-bottom: 1.5px solid #f0f2f5;
+  }
+  .edit-cat-header:hover { background: #fafafa; }
+  .edit-cat-title { display: flex; align-items: center; gap: 7px; font-weight: 600; font-size: 0.9rem; }
+  .edit-cat-body { display: none; padding: 10px 12px 12px; }
+  .edit-cat-body.open { display: block; }
+  .edit-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .edit-chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    border: 1.5px solid #e0e0e0; border-radius: 20px;
+    padding: 4px 8px 4px 11px; font-size: 0.8rem; background: #fafafa; color: #444;
+  }
+  .edit-chip-del {
+    background: none; border: none; color: #ccc; font-size: 0.85rem;
+    cursor: pointer; padding: 0 2px; line-height: 1; border-radius: 50%;
+  }
+  .edit-chip-del:hover { color: #e05555; background: #fff0f0; }
+  .edit-add-row { display: flex; gap: 7px; }
+  .edit-add-row input {
+    flex: 1; border: 1.5px solid #e0e0e0; border-radius: 9px;
+    padding: 8px 11px; font-size: 0.85rem; outline: none;
+  }
+  .edit-add-row input:focus { border-color: #4a7c59; }
+  .edit-add-row button {
+    background: #4a7c59; color: #fff; border: none; border-radius: 9px;
+    padding: 8px 14px; font-size: 0.85rem; font-weight: 600; cursor: pointer; white-space: nowrap;
+  }
+  .edit-add-row button:hover { background: #3a6347; }
+  .reset-btn {
+    width: 100%; background: #fff8f0; border: 1.5px solid #f5dfc0; border-radius: 10px;
+    padding: 10px; font-size: 0.82rem; color: #c87941; cursor: pointer; margin-top: 6px;
+  }
+  .reset-btn:hover { background: #fef0e0; }
+</style>
+</head>
+<body>
+
+<h1>🛒 Poenimekiri</h1>
+<p class="subtitle">Vali kaubad kataloogist või lisa ise</p>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('catalog',this)">📋 Kataloog</button>
+  <button class="tab-btn" onclick="switchTab('manual',this)">✏️ Lisa</button>
+  <button class="tab-btn" onclick="switchTab('list',this)">🛍 Nimekiri</button>
+  <button class="tab-btn" onclick="switchTab('edit',this)">⚙️ Muuda</button>
+</div>
+
+<!-- CATALOG TAB -->
+<div class="panel active" id="panel-catalog">
+  <div id="catalogContainer"></div>
+  <button class="catalog-add-btn" id="catalogAddBtn" onclick="addFromCatalog()" disabled>Lisa valitud nimekiri</button>
+</div>
+
+<!-- MANUAL TAB -->
+<div class="panel" id="panel-manual">
+  <div class="add-form">
+    <input type="text" id="itemInput" placeholder="Kauba nimi (nt. hapukoor, sibul…)" />
+    <div class="form-row">
+      <select id="catSelect"></select>
+      <input type="text" id="qtyInput" placeholder="Kogus" style="width:90px;flex:0 0 90px;" />
+      <button class="add-btn" onclick="addItem()">+ Lisa</button>
+    </div>
+  </div>
+  <p style="font-size:0.8rem;color:#bbb;text-align:center;">Lisatud kaubad ilmuvad "Nimekiri" vahekaardil</p>
+</div>
+
+<!-- LIST TAB -->
+<div class="panel" id="panel-list">
+  <div id="lists"></div>
+  <div class="summary-box">
+    <div class="summary-title-row">
+      <div class="summary-title">✅ Ostunimekiri (märgitud)</div>
+      <div class="share-btns" id="shareBtns" style="display:none">
+        <button class="share-btn" onclick="copyList()" id="copyBtn">📋 Kopeeri</button>
+        <button class="share-btn share-btn-green" onclick="shareList()">📤 Jaga</button>
+      </div>
+    </div>
+    <ul class="summary-list" id="summaryList">
+      <li style="color:#ccc;list-style:none;text-align:center;padding:6px 0;font-size:0.85rem">Märgi linnukesega kaubad mida vaja osta</li>
+    </ul>
+  </div>
+  <div class="bottom-bar">
+    <button class="clear-checked-btn" onclick="clearChecked()">🗑 Eemalda ostetud</button>
+    <button class="clear-btn" onclick="clearAll()">Tühjenda kõik</button>
+  </div>
+</div>
+
+<!-- EDIT CATALOG TAB -->
+<div class="panel" id="panel-edit">
+  <div id="editContainer"></div>
+  <button class="reset-btn" onclick="resetCatalog()">↩ Taasta algne kataloog</button>
+</div>
+
+<script>
+// ── DEFAULT CATALOG ───────────────────────────────────────
+const DEFAULT_CATALOG = {
+  'Piimatooted': ['Piim','Keefir','Hapupiim','Kohupiim','Hapukoor','Või','Margariim','Jogurt','Juust','Sulatatud juust','Kodujuust','Koor','Rõõsk koor','Munad','Vahukoor'],
+  'Liha & kala': ['Kanafilee','Kanarind','Kanakoivad','Seahakk','Seakotlet','Seakarbonaad','Veisehakk','Vorstid','Sink','Suitsuvorst','Peekon','Lõhe','Heeringas','Makrell','Tuunikala (purk)','Krabipulgad','Krevetid'],
+  'Leib & pagaritooted': ['Rukkileib','Sai','Sepik','Täisteraleib','Pita','Tortillad','Croissant','Pätsikesed','Küpsised','Kringel','Rullbiskviit'],
+  'Puu- ja köögiviljad': ['Õunad','Banaanid','Apelsinid','Sidrunid','Pirnid','Viinamarjad','Maasikad','Tomatid','Kurk','Paprika','Sibul','Küüslauk','Porgand','Kartul','Peet','Kapsas','Brokkoli','Lillkapsas','Spinat','Salat','Suvikõrvits','Porrulauk','Seller','Seened'],
+  'Kuivained': ['Pasta','Spagetid','Riis','Tatratangud','Kaerahelbed','Mannasuurused','Odrakruubid','Läätsed','Kikerherned (purk)','Oad (purk)','Konservtomatid','Tomatipass','Jahu','Suhkur','Pruun suhkur','Sool','Must pipar','Õli','Oliiviõli','Äädikas','Sinep','Ketšup','Majonees','Sojakaste','Mesi','Moos','Šokolaadikreem','Müsli','Cornflakes'],
+  'Joogid': ['Vesi (pudel)','Gaseeritud vesi','Apelsinimahl','Õunamahl','Tomatimahl','Kohv','Tee','Kakaopulber','Energiajook','Limonaad','Õlu','Vein'],
+  'Majapidamine': ['WC-paber','Paberrätikud','Nõudepesuaine','Nõudepesumasina tabletid','Pesuaine','Pehmendaja','Üldpuhastusvahend','Vannitoa puhastusvahend','Prügikotid','Külmkotid','Foolium','Toidukile','Küünlad','Hambahari','Hambapasta','Šampoon','Dušigeel','Deodorant','Seep'],
+  'Muud': ['Leivapärmid','Küpsetuspulber','Vanillisuhkur','Maisitärklis','Kookospiim','Tofu','Hapukapsas','Marinaadikurgid','Oliivid','Kapparid','Maapähklivõi','Tahini','Laastud','Popcorn','Šokolaad']
+};
+
+const CAT_ICONS = {
+  'Piimatooted':'🥛','Liha & kala':'🥩','Leib & pagaritooted':'🍞',
+  'Puu- ja köögiviljad':'🥦','Kuivained':'🌾','Joogid':'🧃',
+  'Majapidamine':'🧹','Muud':'📦'
+};
+
+// ── STATE ─────────────────────────────────────────────────
+function loadCatalog() {
+  const saved = localStorage.getItem('catalog_v2');
+  return saved ? JSON.parse(saved) : JSON.parse(JSON.stringify(DEFAULT_CATALOG));
+}
+function saveCatalog() { localStorage.setItem('catalog_v2', JSON.stringify(CATALOG)); }
+
+let CATALOG = loadCatalog();
+let items = JSON.parse(localStorage.getItem('poenimekiri') || '[]');
+let nextId = items.length ? Math.max(...items.map(i => i.id)) + 1 : 1;
+let openCats = {}, catalogOpen = {}, catalogSelected = {}, editOpen = {};
+
+// ── TABS ──────────────────────────────────────────────────
+function switchTab(tab, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-' + tab).classList.add('active');
+  btn.classList.add('active');
+  if (tab === 'list') render();
+  if (tab === 'catalog') renderCatalog();
+  if (tab === 'edit') renderEdit();
+  if (tab === 'manual') populateCatSelect();
+}
+
+// ── CATALOG SELECT ────────────────────────────────────────
+function renderCatalog() {
+  const container = document.getElementById('catalogContainer');
+  container.innerHTML = Object.entries(CATALOG).map(([cat, products]) => {
+    const isOpen = catalogOpen[cat] !== false;
+    const icon = CAT_ICONS[cat] || '📦';
+    const selCount = products.filter(p => catalogSelected[p]).length;
+    return `
+      <div class="catalog-cat">
+        <div class="catalog-cat-header" onclick="toggleCatalogCat('${esc(cat)}')">
+          <div class="catalog-cat-title">
+            <span>${icon}</span> ${cat}
+            ${selCount > 0 ? `<span style="background:#4a7c59;color:#fff;border-radius:10px;padding:1px 8px;font-size:0.72rem;font-weight:700">${selCount}</span>` : ''}
+          </div>
+          <span class="cat-chevron ${isOpen ? 'open' : ''}">▼</span>
+        </div>
+        <div class="catalog-items ${isOpen ? 'open' : ''}">
+          ${products.map(p => `
+            <span class="catalog-chip ${catalogSelected[p] ? 'selected' : ''}" onclick="toggleChip('${esc(p)}')">
+              ${catalogSelected[p] ? '✓ ' : ''}${p}
+            </span>`).join('')}
+        </div>
+      </div>`;
+  }).join('');
+  const total = Object.values(catalogSelected).filter(Boolean).length;
+  const btn = document.getElementById('catalogAddBtn');
+  btn.disabled = total === 0;
+  btn.textContent = total > 0 ? `Lisa ${total} kaupa nimekiri` : 'Lisa valitud nimekiri';
+}
+
+function toggleCatalogCat(cat) { catalogOpen[cat] = catalogOpen[cat] === false; renderCatalog(); }
+function toggleChip(name) { catalogSelected[name] = !catalogSelected[name]; renderCatalog(); }
+
+function addFromCatalog() {
+  Object.entries(catalogSelected).filter(([,v])=>v).forEach(([name]) => {
+    if (items.find(i => i.name === name)) return;
+    let cat = 'Muud';
+    for (const [c, ps] of Object.entries(CATALOG)) { if (ps.includes(name)) { cat = c; break; } }
+    items.push({ id: nextId++, name, cat, qty: '', checked: false });
+    openCats[cat] = true;
+  });
+  catalogSelected = {};
+  saveItems();
+  renderCatalog();
+  goList();
+}
+
+// ── EDIT CATALOG ──────────────────────────────────────────
+function renderEdit() {
+  const container = document.getElementById('editContainer');
+  container.innerHTML = Object.entries(CATALOG).map(([cat, products]) => {
+    const isOpen = editOpen[cat] === true;
+    const icon = CAT_ICONS[cat] || '📦';
+    return `
+      <div class="edit-cat-block">
+        <div class="edit-cat-header" onclick="toggleEditCat('${esc(cat)}')">
+          <div class="edit-cat-title"><span>${icon}</span> ${cat} <span style="font-size:0.72rem;color:#aaa;font-weight:400">${products.length} kaupa</span></div>
+          <span class="cat-chevron ${isOpen ? 'open' : ''}">▼</span>
+        </div>
+        <div class="edit-cat-body ${isOpen ? 'open' : ''}">
+          <div class="edit-chips">
+            ${products.map(p => `
+              <span class="edit-chip">
+                ${p}
+                <button class="edit-chip-del" onclick="deleteCatalogItem('${esc(cat)}','${esc(p)}')" title="Eemalda">✕</button>
+              </span>`).join('')}
+          </div>
+          <div class="edit-add-row">
+            <input type="text" id="newitem_${esc(cat)}" placeholder="Lisa uus kaup…" onkeydown="if(event.key==='Enter')addCatalogItem('${esc(cat)}')" />
+            <button onclick="addCatalogItem('${esc(cat)}')">+ Lisa</button>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function toggleEditCat(cat) { editOpen[cat] = !editOpen[cat]; renderEdit(); }
+
+function deleteCatalogItem(cat, name) {
+  CATALOG[cat] = CATALOG[cat].filter(p => p !== name);
+  saveCatalog();
+  renderEdit();
+}
+
+function addCatalogItem(cat) {
+  const inputId = 'newitem_' + cat;
+  const input = document.getElementById(inputId);
+  const name = input.value.trim();
+  if (!name) return;
+  if (!CATALOG[cat].includes(name)) {
+    CATALOG[cat].push(name);
+    saveCatalog();
+  }
+  input.value = '';
+  renderEdit();
+}
+
+function resetCatalog() {
+  if (confirm('Taastada algne kataloog? Sinu muudatused kustutatakse.')) {
+    CATALOG = JSON.parse(JSON.stringify(DEFAULT_CATALOG));
+    saveCatalog();
+    renderEdit();
+  }
+}
+
+// ── MANUAL ADD ────────────────────────────────────────────
+function populateCatSelect() {
+  const sel = document.getElementById('catSelect');
+  sel.innerHTML = Object.keys(CATALOG).map(cat =>
+    `<option value="${cat}">${(CAT_ICONS[cat]||'📦')} ${cat}</option>`
+  ).join('');
+}
+
+function addItem() {
+  const name = document.getElementById('itemInput').value.trim();
+  const cat = document.getElementById('catSelect').value;
+  const qty = document.getElementById('qtyInput').value.trim();
+  if (!name) { document.getElementById('itemInput').focus(); return; }
+  items.push({ id: nextId++, name, cat, qty, checked: false });
+  openCats[cat] = true;
+  document.getElementById('itemInput').value = '';
+  document.getElementById('qtyInput').value = '';
+  saveItems();
+  goList();
+}
+
+// ── LIST ──────────────────────────────────────────────────
+function saveItems() { localStorage.setItem('poenimekiri', JSON.stringify(items)); }
+function toggle(id) { const i = items.find(i=>i.id===id); if(i) i.checked=!i.checked; saveItems(); render(); }
+function deleteItem(id) { items=items.filter(i=>i.id!==id); saveItems(); render(); }
+function clearChecked() { items=items.filter(i=>!i.checked); saveItems(); render(); }
+function clearAll() { if(confirm('Kas oled kindel? Kõik kaubad eemaldatakse.')) { items=[]; saveItems(); render(); } }
+function toggleCat(cat) { openCats[cat]=openCats[cat]===false?true:false; render(); }
+
+function goList() {
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('panel-list').classList.add('active');
+  document.querySelectorAll('.tab-btn')[2].classList.add('active');
+  render();
+}
+
+function render() {
+  const container = document.getElementById('lists');
+  const cats = {};
+  items.forEach(item => { if(!cats[item.cat]) cats[item.cat]=[]; cats[item.cat].push(item); });
+  if (Object.keys(cats).length === 0) {
+    container.innerHTML = '<p class="empty-msg">Nimekiri on tühi.<br>Mine "Kataloog" ja vali kaubad 👆</p>';
+  } else {
+    container.innerHTML = Object.entries(cats).map(([cat, catItems]) => {
+      const isOpen = openCats[cat] !== false;
+      const icon = CAT_ICONS[cat] || '📦';
+      const checkedCount = catItems.filter(i=>i.checked).length;
+      const countLabel = checkedCount > 0 ? `${checkedCount}/${catItems.length} ostetud` : `${catItems.length} kaupa`;
+      return `
+        <div class="category-block">
+          <div class="category-header" onclick="toggleCat('${esc(cat)}')">
+            <div class="cat-title"><span>${icon}</span> ${cat} <span class="cat-count">${countLabel}</span></div>
+            <span class="cat-chevron ${isOpen?'open':''}">▼</span>
+          </div>
+          <div class="item-list ${isOpen?'open':''}">
+            ${catItems.map(item => `
+              <div class="item-row">
+                <input type="checkbox" ${item.checked?'checked':''} onchange="toggle(${item.id})" />
+                <label class="item-label ${item.checked?'checked':''}" onclick="toggle(${item.id})">${item.name}</label>
+                ${item.qty?`<span class="item-qty">${item.qty}</span>`:''}
+                <button class="item-del" onclick="deleteItem(${item.id})">✕</button>
+              </div>`).join('')}
+          </div>
+        </div>`;
+    }).join('');
+  }
+  const checked = items.filter(i=>i.checked);
+  document.getElementById('shareBtns').style.display = checked.length > 0 ? 'flex' : 'none';
+  const summaryEl = document.getElementById('summaryList');
+  if (checked.length === 0) {
+    summaryEl.innerHTML = '<li style="color:#ccc;list-style:none;text-align:center;padding:6px 0;font-size:0.85rem">Märgi linnukesega kaubad mida vaja osta</li>';
+  } else {
+    const byCat = {};
+    checked.forEach(i=>{ if(!byCat[i.cat]) byCat[i.cat]=[]; byCat[i.cat].push(i); });
+    summaryEl.innerHTML = Object.entries(byCat).map(([cat,catItems]) =>
+      `<li><strong>${CAT_ICONS[cat]||'📦'} ${cat}:</strong> ${catItems.map(i=>i.qty?`${i.name} (${i.qty})`:i.name).join(', ')}</li>`
+    ).join('');
+  }
+}
+
+// ── SHARE ─────────────────────────────────────────────────
+function buildShareText() {
+  const checked = items.filter(i=>i.checked);
+  if (!checked.length) return '';
+  const byCat = {};
+  checked.forEach(i=>{ if(!byCat[i.cat]) byCat[i.cat]=[]; byCat[i.cat].push(i); });
+  let lines = ['🛒 Poenimekiri\n'];
+  Object.entries(byCat).forEach(([cat,catItems]) => {
+    lines.push((CAT_ICONS[cat]||'📦') + ' ' + cat);
+    catItems.forEach(i => lines.push('  • ' + i.name + (i.qty ? ' — ' + i.qty : '')));
+  });
+  return lines.join('\n');
+}
+function copyList() {
+  const text = buildShareText(); if (!text) return;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copyBtn');
+    btn.textContent='✓ Kopeeritud!'; btn.classList.add('copied');
+    setTimeout(()=>{ btn.textContent='📋 Kopeeri'; btn.classList.remove('copied'); }, 2000);
+  }).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value=text; ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+    const btn = document.getElementById('copyBtn');
+    btn.textContent='✓ Kopeeritud!'; setTimeout(()=>{ btn.textContent='📋 Kopeeri'; }, 2000);
+  });
+}
+function shareList() {
+  const text = buildShareText(); if (!text) return;
+  if (navigator.share) navigator.share({ title: 'Poenimekiri', text });
+  else copyList();
+}
+
+// ── UTILS ─────────────────────────────────────────────────
+function esc(s) { return s.replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+
+// ── INIT ──────────────────────────────────────────────────
+document.getElementById('itemInput').addEventListener('keydown', e => { if(e.key==='Enter') addItem(); });
+document.getElementById('qtyInput').addEventListener('keydown', e => { if(e.key==='Enter') addItem(); });
+populateCatSelect();
+renderCatalog();
+render();
+</script>
+</body>
+</html>
